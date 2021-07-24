@@ -73,8 +73,17 @@ def gravityinputparser(g):
 
 
 def wortinputparser(ssv):
-    volume, gravity = ssv.split('/')
-    return WortData(float(volume), readinginputparser(gravity))
+    try:
+        volume, gravity = ssv.split('/')
+    except ValueError:
+        raise ValueError('Wort data should be entered in the format <volume>/<gravity>. '
+                         'See the help text for more detail')
+    try:
+        volume = float(volume)
+    except ValueError:
+        raise ValueError(f'Entered volume {volume} was not a numeric value. Please enter the numeric value in gallons.')
+    
+    return WortData(volume, readinginputparser(gravity))
 
 
 def validate(args):
@@ -92,7 +101,16 @@ def validate(args):
 
 def parse_args():
     parser = argparse.ArgumentParser()
-    parser.add_argument('-w', '--runnings', type=wortinputparser, nargs='+', required=True)
+    parser.add_argument('-w', '--runnings', type=wortinputparser, nargs='+', required=True,
+                        help='Enter a list of runnings data in the format <volume [gal]>/<gravity>. '
+                             'The volume is simply a numeric quantity of gallons for the running. '
+                             'The gravity is a numeric quantity of either specific gravity or Brix, the units of which '
+                             'are determined automatically (values less than 1.5 are considered specific gravities). '
+                             'Optionally, if you have already corrected your refractometer measurement with a wort '
+                             'correction factor, add a \'c\' to indicate that correction has already taken place. '
+                             'Otherwise you may optionally supply a \'u\' to indicate an uncorrected measurement, but '
+                             'this would be assumed and is not necessary. For example, if I took first runnings at 3 '
+                             'gallons and measured 18 brix, I would supply ')
     parser.add_argument('-o', '--target_OG', type=gravityinputparser, required=True)
     parser.add_argument('-p', '--preboil_volume', type=float, help='Pre-boil volume in gallons')
     parser.add_argument('-s', '--postboil_volume', type=float, help='Post-boil volume in gallons')
