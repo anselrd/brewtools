@@ -54,7 +54,8 @@ def parse_args():
                              'correction factor, add a \'c\' to indicate that correction has already taken place. '
                              'Otherwise you may optionally supply a \'u\' to indicate an uncorrected measurement, but '
                              'this would be assumed and is not necessary. For example, if I took first runnings at 3 '
-                             'gallons and measured 18 brix, I would supply ')
+                             'gallons and measured 18 brix, then took second runnings at 2 gallons and measured 12.5 '
+                             'brix, I would supply `-w 3/18 2/12.5`')
     parser.add_argument('-o', '--target_OG', type=gravityinputparser, required=True)
     parser.add_argument('-p', '--preboil_volume', type=float, help='Pre-boil volume in gallons')
     parser.add_argument('-s', '--postboil_volume', type=float, help='Post-boil volume in gallons')
