@@ -59,7 +59,7 @@ def parse_args():
     parser.add_argument('-o', '--target_OG', type=gravityinputparser, required=True)
     parser.add_argument('-p', '--preboil_volume', type=float, help='Pre-boil volume in gallons')
     parser.add_argument('-s', '--postboil_volume', type=float, help='Post-boil volume in gallons')
-    parser.add_argument('-r', '--boiloff_rate', type=float, default=1.7, help='Boil-off rate in gallons/hour')
+    parser.add_argument('-r', '--boiloff_rate', type=float, default=0.785, help='Boil-off rate in gallons/hour')
     parser.add_argument('-d', '--boil_duration', type=float, default=60, help='Boil time in minutes')
     parser.add_argument('-v', '--verbose', action='store_true')
 
