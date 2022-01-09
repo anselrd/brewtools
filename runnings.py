@@ -104,6 +104,16 @@ def main():
     if water_volume > 0:
         print(f'Topoff water: {water_volume:.3f} gallons')
 
+    if args.preboil_volume:
+        preboil_volume = args.preboil_volume
+        postboil_volume = args.preboil_volume - args.boiloff_rate * args.boil_duration / 60
+    else:
+        preboil_volume = args.postboil_volme + args.boiloff_rate * args.boil_duration / 60
+        postboil_volume = args.postboil_volume
+    print('')
+    print(f'Boil start: {preboil_volume}gal @ {preboil_gravity.specific_gravity:.3f}')
+    print(f'Boil end: {postboil_volume}gal @ {args.target_OG.specific_gravity:.3f}')
+
 
 if __name__ == '__main__':
     main()
