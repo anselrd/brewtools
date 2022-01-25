@@ -113,7 +113,7 @@ class Mass:
     @classmethod
     def from_text(cls, text):
         units = '|'.join(cls.prefixes)
-        mass_finder = rf'(?P<quantity>\d*(.\d+)?([eE][-\+]?\d+?)?)(?P<units>{units})'
+        mass_finder = rf'(?P<quantity>(\d*\.)?\d+([eE][-\+]?\d+?)?)(?P<units>{units})'
         masses = [
             cls.of(float(mo.group('quantity')), cls.prefixes[mo.group('units')])
             for mo in re.finditer(mass_finder, text)
@@ -184,7 +184,7 @@ class Volume:
     @classmethod
     def from_text(cls, text):
         units = '|'.join(cls.prefixes)
-        volume_finder = rf'(?P<quantity>(\d*.)?\d+([eE][-\+]?\d+?)?)(?P<units>{units})'
+        volume_finder = rf'(?P<quantity>(\d*\.)?\d+([eE][-\+]?\d+?)?)(?P<units>{units})'
         # volumes = [
         #     cls.of(float(mo.group('quantity')), cls.prefixes[mo.group('units')])
         #     for mo in re.finditer(volume_finder, text)
