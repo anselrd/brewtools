@@ -32,15 +32,16 @@ def wortinputparser(ssv):
 
 def validate(args):
     boiloff = args.boiloff_rate * args.boil_duration / 60
-    if args.preboil_volume and args.postboil_volume:
-        if args.preboil_volume - boiloff != args.postboil_volume:
-            raise ValueError(f'Pre and post boil volumes both supplied but do not agree with boiloff')
+    shrinkage_factor = 1 - args.shrinkage_pct / 100
+    if args.preboil_volume and args.final_volume:
+        if (args.preboil_volume - boiloff) * shrinkage_factor != args.final_volume:
+            raise ValueError(f'Pre-boil and final volumes both supplied but do not agree with boiloff/shrinkage')
     elif args.preboil_volume:
-        args.postboil_volume = args.preboil_volume - boiloff
-    elif args.postboil_volume:
-        args.preboil_volume = args.postboil_volume + boiloff
+        args.final_volume = (args.preboil_volume - boiloff) * shrinkage_factor
+    elif args.final_volume:
+        args.preboil_volume = args.final_volume / shrinkage_factor + boiloff
     else:
-        raise ValueError('At least one of \'--preboil_volume\' or \'--postboil_volume\' must be supplied')
+        raise ValueError('At least one of \'-p/--preboil_volume\' or \'-f/--final_volume\' must be supplied')
 
 
 def parse_args():
@@ -58,9 +59,10 @@ def parse_args():
                              'brix, I would supply `-w 3/18 2/12.5`')
     parser.add_argument('-o', '--target_OG', type=gravityinputparser, required=True)
     parser.add_argument('-p', '--preboil_volume', type=float, help='Pre-boil volume in gallons')
-    parser.add_argument('-s', '--postboil_volume', type=float, help='Post-boil volume in gallons')
+    parser.add_argument('-f', '--final_volume', type=float, help='Cooled post-boil volume in gallons')
     parser.add_argument('-r', '--boiloff_rate', type=float, default=0.785, help='Boil-off rate in gallons/hour')
     parser.add_argument('-d', '--boil_duration', type=float, default=60, help='Boil time in minutes')
+    parser.add_argument('-s', '--shrinkage_pct', type=float, default=4, help='Cooling shrinkage expressed as a percent')
     parser.add_argument('-v', '--verbose', action='store_true')
 
     args = parser.parse_args()
@@ -73,14 +75,14 @@ def main():
     args = parse_args()
     args.runnings.sort(key=attrgetter('gravity'), reverse=True)
 
-    preboil_gravity = Gravity.from_sg(args.target_OG.gravity_pts * args.postboil_volume / args.preboil_volume)
+    preboil_gravity = Gravity.from_sg(args.target_OG.gravity_pts * args.final_volume / args.preboil_volume)
 
     total_gravities = [0] + list(accumulate([w.gravity.gravity_pts * w.volume for w in args.runnings]))
     max_gravity = Gravity.from_sg(total_gravities[-1] / args.preboil_volume)
 
     # Ensure there is enough sugar
     if max_gravity < preboil_gravity:
-        raise ValueError(f'Max possible gravity {Gravity.from_sg(total_gravities[-1] / args.postboil_volume)} '
+        raise ValueError(f'Max possible gravity {Gravity.from_sg(total_gravities[-1] / args.final_volume)} '
                          f'is below target gravity {args.target_OG}')
 
     last_running_gravity = next(
@@ -104,15 +106,17 @@ def main():
     if water_volume > 0:
         print(f'Topoff water: {water_volume:.3f} gallons')
 
+    boiloff = args.boiloff_rate * args.boil_duration / 60
+    shrinkage = 1 - args.shrinkage_pct / 100
     if args.preboil_volume:
         preboil_volume = args.preboil_volume
-        postboil_volume = args.preboil_volume - args.boiloff_rate * args.boil_duration / 60
+        final_volume = (args.preboil_volume - boiloff) * shrinkage
     else:
-        preboil_volume = args.postboil_volme + args.boiloff_rate * args.boil_duration / 60
-        postboil_volume = args.postboil_volume
+        preboil_volume = args.final_volme / shrinkage + boiloff
+        final_volume = args.final_volume
     print('')
-    print(f'Boil start: {preboil_volume}gal @ {preboil_gravity.specific_gravity:.3f}')
-    print(f'Boil end: {postboil_volume}gal @ {args.target_OG.specific_gravity:.3f}')
+    print(f'Boil start: {preboil_volume:.2f}gal @ {preboil_gravity.specific_gravity:.3f}')
+    print(f'Boil end: {final_volume:.2f}gal @ {args.target_OG.specific_gravity:.3f}')
 
 
 if __name__ == '__main__':
