@@ -1,12 +1,12 @@
 import argparse
-import re
+import sys
 from collections import namedtuple
 from itertools import accumulate
 from operator import attrgetter
 
 import inflect
 
-from units import Gravity, corrected
+from units import Gravity
 
 
 WortData = namedtuple('WortData', ['volume', 'gravity'])
@@ -77,34 +77,37 @@ def main():
 
     preboil_gravity = Gravity.from_sg(args.target_OG.gravity_pts * args.final_volume / args.preboil_volume)
 
-    total_gravities = [0] + list(accumulate([w.gravity.gravity_pts * w.volume for w in args.runnings]))
-    max_gravity = Gravity.from_sg(total_gravities[-1] / args.preboil_volume)
+    total_sugars = [0] + list(accumulate([w.gravity.gravity_pts * w.volume for w in args.runnings]))
+    total_volumes = [0] + list(accumulate([w.volume for w in args.runnings]))
+    needed_sugar = args.target_OG.gravity_pts * args.final_volume
 
-    # Ensure there is enough sugar
-    if max_gravity < preboil_gravity:
-        raise ValueError(f'Max possible gravity {Gravity.from_sg(total_gravities[-1] / args.final_volume)} '
-                         f'is below target gravity {args.target_OG}')
+    # Check for issues with running gravities
+    if total_sugars[-1] < needed_sugar:
+        # Having not enough total sugar limits the final batch size
+        batch_size = total_sugars[-1]/args.target_OG.gravity_pts
+        sys.exit(f'Not enough sugar was extracted during the mash. Max batch size is {batch_size:.2f}gal '
+                 f'(specified {args.final_volume:.2f}gal batch)')
 
-    last_running_gravity = next(
-        filter(
-            lambda t: Gravity.from_sg(t / args.preboil_volume) > preboil_gravity,
-            total_gravities
-        )
-    )
-    last_running = total_gravities.index(last_running_gravity)
-    u = (preboil_gravity.gravity_pts * args.preboil_volume - total_gravities[last_running - 1]) / \
-        args.runnings[last_running - 1].gravity.gravity_pts
-    volumes = [w.volume for w in args.runnings[:last_running - 1]] + \
-              [u] + \
-              [0 for _ in range(len(args.runnings) - last_running)]
+    last_running = total_sugars.index(next(filter(lambda t: t >= needed_sugar, total_sugars))) - 1
+    last_running_fraction = (needed_sugar - total_sugars[last_running]) / \
+                            (total_sugars[last_running + 1] - total_sugars[last_running])
+    last_running_volume = last_running_fraction * args.runnings[last_running].volume
+    running_volume = total_volumes[last_running] + last_running_volume
 
-    for i, v in enumerate(filter(None, volumes)):
+    if running_volume > args.preboil_volume:
+        excess_volume = running_volume - args.preboil_volume
+        extra_boil = excess_volume / args.boiloff_rate * 60
+        new_boil = args.boil_duration + extra_boil
+        sys.exit(f'Boil time must be increased by {extra_boil:.1f} min ({new_boil:.2f} min boil).')
+
+    volumes = [w.volume for w in args.runnings[:last_running]] + [last_running_volume]
+    topoff_water = args.preboil_volume - sum(volumes)
+
+    for i, v in enumerate(volumes):
         n = i + 1
         print(inflect.engine().ordinal(n), f'runnings: {v:.3f} gallons')
 
-    water_volume = args.preboil_volume - sum(volumes)
-    if water_volume > 0:
-        print(f'Topoff water: {water_volume:.3f} gallons')
+    print(f'Topoff water: {topoff_water:.3f} gallons')
 
     boiloff = args.boiloff_rate * args.boil_duration / 60
     shrinkage = 1 - args.shrinkage_pct / 100
