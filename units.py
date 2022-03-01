@@ -126,7 +126,7 @@ class Mass:
     def of(cls, quantity: float, unit: Units):
         return cls(quantity * unit.value)
 
-    def in_(self, unit):
+    def in_(self, unit: 'Mass.Units'):
         return self.grams / unit.value
 
 
