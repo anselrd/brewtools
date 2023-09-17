@@ -63,6 +63,7 @@ def parse_args():
     parser.add_argument('-r', '--boiloff_rate', type=float, default=0.785, help='Boil-off rate in gallons/hour')
     parser.add_argument('-d', '--boil_duration', type=float, default=60, help='Boil time in minutes')
     parser.add_argument('-s', '--shrinkage_pct', type=float, default=4, help='Cooling shrinkage expressed as a percent')
+    parser.add_argument('-u', '--unsorted', action='store_true')
     parser.add_argument('-v', '--verbose', action='store_true')
 
     args = parser.parse_args()
@@ -73,7 +74,8 @@ def parse_args():
 
 def main():
     args = parse_args()
-    args.runnings.sort(key=attrgetter('gravity'), reverse=True)
+    if not args.unsorted:
+        args.runnings.sort(key=attrgetter('gravity'), reverse=True)
 
     preboil_gravity = Gravity.from_sg(args.target_OG.gravity_pts * args.final_volume / args.preboil_volume)
 
